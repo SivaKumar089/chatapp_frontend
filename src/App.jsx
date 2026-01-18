@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import "./App.css";
 
 function App() {
@@ -9,7 +11,7 @@ function App() {
   const [error, setError] = useState("");
   const chatBoxRef = useRef(null);
 
-  // Scroll to bottom when new message added
+  // Auto scroll to bottom
   useEffect(() => {
     chatBoxRef.current?.scrollTo({
       top: chatBoxRef.current.scrollHeight,
@@ -19,28 +21,37 @@ function App() {
 
   const sendMessage = async (e) => {
     e.preventDefault();
+
     if (!input.trim()) {
       setError("Please enter a message!");
       return;
     }
 
     setError("");
-    const userMessage = { sender: "user", text: input };
-    setMessages([...messages, userMessage]);
+
+    const userMessage = {
+      sender: "user",
+      text: input,
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
 
-    
-
     try {
-      const res = await axios.post("https://chatapp-backend-app.onrender.com/api/chat/", {
-        message: input,
-      });
+      const res = await axios.post(
+        "https://chatapp-backend-app.onrender.com/api/chat/",
+        { message: input }
+      );
 
-      const botMessage = { sender: "bot", text: res.data.reply };
+      const botMessage = {
+        sender: "bot",
+        text: res.data.reply,
+      };
+
       setMessages((prev) => [...prev, botMessage]);
     } catch (err) {
-      setError(err.response?.data?.error || "Something went wrong!");
+      setError(err.response?.data?.error || "Server error!");
     } finally {
       setLoading(false);
     }
@@ -49,17 +60,23 @@ function App() {
   return (
     <div className="container">
       <div className="chat-card">
-        {/* Fixed header */}
-        <div className="chat-header">ChatBot</div>
+        {/* Header */}
+        <div className="chat-header">AI ChatBot</div>
 
-        {/* Scrollable chat messages */}
+        {/* Chat Messages */}
         <div className="chat-box" ref={chatBoxRef}>
-          {messages.map((msg, i) => (
+          {messages.map((msg, index) => (
             <div
-              key={i}
+              key={index}
               className={`message ${msg.sender === "user" ? "user" : "bot"}`}
             >
-              {msg.text}
+              {msg.sender === "bot" ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {msg.text}
+                </ReactMarkdown>
+              ) : (
+                msg.text
+              )}
             </div>
           ))}
 
@@ -74,7 +91,7 @@ function App() {
           {error && <div className="error">{error}</div>}
         </div>
 
-        {/* Fixed input box */}
+        {/* Input */}
         <form className="input-area" onSubmit={sendMessage}>
           <input
             type="text"
